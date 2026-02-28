@@ -1,0 +1,30 @@
+services:
+
+  # Контейнер 1 - Брокер
+  broker:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt-broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  # Контейнер 2 - Постман (логує всі повідомлення)
+  postman:
+    build: ./postman
+    container_name: mqtt-postman
+    restart: unless-stopped
+    depends_on:
+      - broker
+
+  # Контейнер 3 - Nginx (показує веб-сторінку)
+  nginx:
+    build: ./nginx
+    container_name: mqtt-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - broker

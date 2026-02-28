@@ -1,71 +1,63 @@
-# Practical lesson pz-SOLID  
-# Практична реалізація SOLID принципів  
+Практична робота №1 — MQTT брокер
+Опис
+Розгортання MQTT брокера Mosquitto у Docker з чотирма контейнерами що спілкуються між собою через протокол MQTT.
+Що таке MQTT?
+MQTT (Message Queuing Telemetry Transport) — це протокол передачі повідомлень за принципом publish/subscribe (публікація/підписка). Замість того щоб пристрої спілкувались напряму, всі повідомлення проходять через посередника — брокер.
+ПоняттяОписBrokerСервер-посередник, розподіляє повідомлення між учасникамиTopicКанал повідомлень, наприклад nodes/chatPublishВідправка повідомлення в топікSubscribeПідписка на топік для отримання повідомленьQoS 0Без підтвердження доставкиQoS 1Повідомлення доставляється хоча б один раз#Wildcard — підписка на всі топіки
+Архітектура
+┌─────────┐     publish      ┌─────────────┐     forward     ┌─────────┐
+│ Вузол 2 │ ──────────────► │    Брокер   │ ──────────────► │ Вузол 1 │
+└─────────┘                  │  Mosquitto  │                  └─────────┘
+                             └─────────────┘
+                                    │
+                                    │ forward
+                                    ▼
+                             ┌─────────────┐
+                             │   Постман   │
+                             │  (логування)│
+                             └─────────────┘
 
-> У цьому занятті студенти отримують практичні навички застосування SOLID принципів під час рефакторингу існуючого коду.  
-> Мета — створити гнучку, масштабовану та чисту архітектуру шляхом застосування SRP, OCP, LSP, ISP та DIP.
+Вузол 2 — відправляє повідомлення в топік nodes/chat кожні 5 секунд
+Вузол 1 — підписаний на nodes/chat, отримує повідомлення
+Брокер — посередник, пересилає повідомлення від вузла 2 до підписників
+Постман — підписаний на # (всі топіки), виводить логи всіх повідомлень
 
----
-
-## What need to do:
-* Провести аналіз вихідного «анти-SOLID» коду  
-* Визначити порушення кожного SOLID принципу  
-* Виконати рефакторинг згідно з:
-  * SRP — Single Responsibility Principle  
-  * OCP — Open/Closed Principle  
-  * LSP — Liskov Substitution Principle  
-  * ISP — Interface Segregation Principle  
-  * DIP — Dependency Inversion Principle  
-* Створити відповідні інтерфейси й абстракції  
-* Усунути зайві або циклічні залежності  
-* Додати мінімальний набір unit-тестів після рефакторингу  
-
----
-
-## Acceptance criteria
-* Реалізація на мові Typescript 
-* Студент розуміє кожен SOLID принцип та пояснює його застосування  
-* Увесь вихідний код проаналізовано  
-* Усі порушення SOLID знайдено та описано  
-* Після рефакторингу:
-  * Кожен клас має одну відповідальність (SRP)  
-  * Код розширюється через нові класи, а не редагування існуючих (OCP)  
-  * Класи-нащадки повністю заміщають базові (LSP)  
-  * Інтерфейси невеликі й специфічні (ISP)  
-  * Залежності реалізовані через абстракції (DIP)  
-* Код структурований, логічний та зрозумілий  
-* Усі тести проходять успішно  
-* Звіт оформлений у Markdown (README.md)
-
-## Directory Structure
-```
-├── pz-SOLID
-│   ├── src
-│   │   ├── original          # код із навмисними порушеннями SOLID
-│   │   ├── refactored        # код після рефакторингу
-│   │   ├── interfaces        # абстракції та інтерфейси
-│   ├── tests
-│   │   ├── refactored.spec.js
-│   ├── .editorconfig
-│   ├── .gitignore
-│   ├── jest.config.js
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── README.md
-└──
-```
-
-## Useful links
-
-[SOLID Principles Explained](https://www.baeldung.com/solid-principles)
-
-[SOLID: The First 5 Principles of Object-Oriented Design](https://www.freecodecamp.org/news/solid-principles-explained-in-plain-english/)
-
-[JavaScript SOLID: Реалізація принципів](https://khalilstemmler.com/articles/solid-principles/)
-
-[Clean Code Concepts Adapted for JavaScript](https://github.com/ryanmcdermott/clean-code-javascript)
-
-[Dependency Injection in JavaScript](https://javascript.plainenglish.io/dependency-injection-in-javascript-1b82a8101c1a)
-
-
-
-
+Структура проєкту
+pz-MQTT/
+├── docker-compose.yml       # головний файл, запускає всі контейнери
+├── broker/
+│   └── mosquitto.conf       # конфігурація брокера
+├── node1/
+│   ├── node1.py             # скрипт вузла 1 (отримує повідомлення)
+│   └── Dockerfile
+├── node2/
+│   ├── node2.py             # скрипт вузла 2 (відправляє повідомлення)
+│   └── Dockerfile
+└── postman/
+    ├── postman.py           # скрипт логування всіх повідомлень
+    └── Dockerfile
+Запуск
+1. Клонувати репозиторій
+bashgit clone <посилання на репозиторій>
+cd pz-MQTT
+2. Запустити всі контейнери
+bashdocker compose up --build
+3. Перевірити що всі контейнери запущені
+bashdocker ps
+Має бути 4 контейнери зі статусом Up:
+mqtt-broker
+mqtt-node1
+mqtt-node2
+mqtt-postman
+4. Переглянути логи в реальному часі
+bashdocker compose logs -f
+5. Зупинити
+bashdocker compose down
+Приклад логів
+mqtt-broker   | mosquitto version 2.0.22 running
+mqtt-broker   | New client connected as node2
+mqtt-broker   | New client connected as node1
+mqtt-broker   | New client connected as postman-logger
+mqtt-node2    | [Вузол 2] Відправив: Привіт від Вузла 2! Повідомлення #1
+mqtt-node1    | [Вузол 1] Отримав повідомлення: Привіт від Вузла 2! Повідомлення #1
+mqtt-postman  | [Постман][14:23:01] Топік: nodes/chat | Повідомлення: Привіт від Вузла 2! Повідомлення #1
